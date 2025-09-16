@@ -13,13 +13,22 @@ import { MoodSelector } from '@/components/MoodSelector';
 import { AchievementCard } from '@/components/AchievementCard';
 import { StreakCounter } from '@/components/StreakCounter';
 import { WellnessCard } from '@/components/WellnessCard';
+import { MoodHistoryChart } from '@/components/MoodHistoryChart';
+import { useMoodHistory } from '@/hooks/useMoodHistory';
 
 const { width } = Dimensions.get('window');
 
 export default function Dashboard() {
-  const [currentMood, setCurrentMood] = useState<string | null>(null);
   const [streakDays, setStreakDays] = useState(7);
   const [completedActivities, setCompletedActivities] = useState<Set<string>>(new Set());
+  
+  const { moodHistory, addMoodEntry, getTodaysMood } = useMoodHistory();
+  const todaysMood = getTodaysMood();
+  const currentMood = todaysMood?.mood || null;
+
+  const handleMoodSelect = (mood: string) => {
+    addMoodEntry(mood);
+  };
 
   const achievements = [
     {
@@ -117,13 +126,18 @@ export default function Dashboard() {
         <View style={styles.section}>
           <MoodSelector
             selectedMood={currentMood}
-            onMoodSelect={setCurrentMood}
+            onMoodSelect={handleMoodSelect}
           />
         </View>
 
         {/* Streak Counter */}
         <View style={styles.section}>
           <StreakCounter days={streakDays} />
+        </View>
+
+        {/* Mood History Chart */}
+        <View style={styles.section}>
+          <MoodHistoryChart moodHistory={moodHistory} />
         </View>
 
         {/* Progress Summary */}

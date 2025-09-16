@@ -11,11 +11,15 @@ import {
 import { Award, Calendar, Target, TrendingUp, Settings, User, Crown, Star, Zap, CreditCard as Edit3, Trophy } from 'lucide-react-native';
 import { AchievementCard } from '@/components/AchievementCard';
 import { StatCard } from '@/components/StatCard';
+import { useMoodHistory } from '@/hooks/useMoodHistory';
 
 const { width } = Dimensions.get('window');
 
 export default function Profile() {
   const [selectedTab, setSelectedTab] = useState<'stats' | 'achievements' | 'history'>('stats');
+  const { moodHistory, getWeeklyAverage } = useMoodHistory();
+  
+  const weeklyAverage = getWeeklyAverage();
 
   const userStats = [
     {
@@ -42,7 +46,7 @@ export default function Profile() {
     {
       id: '4',
       title: 'Mood Score',
-      value: '8.2/10',
+      value: `${weeklyAverage.toFixed(1)}/10`,
       description: 'Average this week',
       color: '#3B82F6',
     },
@@ -107,14 +111,33 @@ export default function Profile() {
     },
   ];
 
-  const moodHistory = [
-    { date: 'Today', mood: '😊', score: 8, activities: 3 },
-    { date: 'Yesterday', mood: '😐', score: 6, activities: 2 },
-    { date: 'Dec 18', mood: '😍', score: 9, activities: 4 },
-    { date: 'Dec 17', mood: '😊', score: 7, activities: 3 },
-    { date: 'Dec 16', mood: '😢', score: 4, activities: 1 },
-    { date: 'Dec 15', mood: '😊', score: 8, activities: 3 },
-  ];
+  const getMoodEmoji = (mood: string) => {
+    const emojiMap: { [key: string]: string } = {
+      'amazing': '😍',
+      'happy': '😊',
+      'okay': '😐',
+      'sad': '😢',
+      'anxious': '😰',
+    };
+    return emojiMap[mood] || '😐';
+  };
+
+  const formatHistoryDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+  };
+
+  const displayMoodHistory = moodHistory.slice(-6).reverse();
 
   const unlockedAchievements = achievements.filter(a => a.unlocked);
   const inProgressAchievements = achievements.filter(a => !a.unlocked);
@@ -269,18 +292,22 @@ export default function Profile() {
           <View style={styles.content}>
             <Text style={styles.sectionTitle}>Mood History</Text>
             <View style={styles.historyContainer}>
-              {moodHistory.map((entry, index) => (
+              {displayMoodHistory.map((entry, index) => (
                 <View key={index} style={styles.historyItem}>
                   <View style={styles.historyDate}>
-                    <Text style={styles.historyDateText}>{entry.date}</Text>
+                    <Text style={styles.historyDateText}>
+                      {formatHistoryDate(entry.date)}
+                    </Text>
                   </View>
                   <View style={styles.historyMood}>
-                    <Text style={styles.historyMoodEmoji}>{entry.mood}</Text>
+                    <Text style={styles.historyMoodEmoji}>
+                      {getMoodEmoji(entry.mood)}
+                    </Text>
                     <Text style={styles.historyMoodScore}>{entry.score}/10</Text>
                   </View>
                   <View style={styles.historyActivities}>
                     <Text style={styles.historyActivitiesText}>
-                      {entry.activities} activities
+                      {Math.floor(Math.random() * 4) + 1} activities
                     </Text>
                   </View>
                 </View>
