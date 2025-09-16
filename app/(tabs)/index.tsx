@@ -14,20 +14,35 @@ import { AchievementCard } from '@/components/AchievementCard';
 import { StreakCounter } from '@/components/StreakCounter';
 import { WellnessCard } from '@/components/WellnessCard';
 import { MoodHistoryChart } from '@/components/MoodHistoryChart';
+import { XPProgressBar } from '@/components/XPProgressBar';
+import { XPNotification } from '@/components/XPNotification';
+import { XPActivityFeed } from '@/components/XPActivityFeed';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
+import { useXPSystem, XPEntry } from '@/hooks/useXPSystem';
 
 const { width } = Dimensions.get('window');
 
 export default function Dashboard() {
   const [streakDays, setStreakDays] = useState(7);
   const [completedActivities, setCompletedActivities] = useState<Set<string>>(new Set());
+  const [xpNotification, setXpNotification] = useState<XPEntry | null>(null);
   
   const { moodHistory, addMoodEntry, getTodaysMood } = useMoodHistory();
+  const { userLevel, addXP, getTodaysXP, getRecentXPEntries, checkStreakBonus } = useXPSystem();
   const todaysMood = getTodaysMood();
   const currentMood = todaysMood?.mood || null;
 
   const handleMoodSelect = (mood: string) => {
     addMoodEntry(mood);
+    // Award XP for mood check-in
+    const xpEntry = addXP('mood_checkin');
+    if (xpEntry) {
+      setXpNotification(xpEntry);
+    }
+  };
+
+  const handleXPNotificationComplete = () => {
+    setXpNotification(null);
   };
 
   const achievements = [
@@ -68,6 +83,7 @@ export default function Dashboard() {
       description: '5-minute guided breathing exercise to center yourself',
       duration: '5 min',
       completed: completedActivities.has('1'),
+      xpActivity: 'meditation',
     },
     {
       id: '2',
@@ -75,6 +91,7 @@ export default function Dashboard() {
       description: 'Write down 3 things you\'re grateful for today',
       duration: '3 min',
       completed: completedActivities.has('2'),
+      xpActivity: 'gratitude_journal',
     },
     {
       id: '3',
@@ -82,6 +99,7 @@ export default function Dashboard() {
       description: 'Take a moment to reflect on your current emotions',
       duration: '2 min',
       completed: currentMood !== null,
+      xpActivity: 'mood_checkin',
     },
     {
       id: '4',
@@ -89,6 +107,7 @@ export default function Dashboard() {
       description: 'Practice the 4-7-8 breathing technique',
       duration: '4 min',
       completed: completedActivities.has('4'),
+      xpActivity: 'breathing_exercise',
     },
     {
       id: '5',
@@ -96,15 +115,25 @@ export default function Dashboard() {
       description: 'Repeat empowering statements to boost confidence',
       duration: '3 min',
       completed: completedActivities.has('5'),
+      xpActivity: 'positive_affirmations',
     },
   ];
 
   const handleActivityComplete = (activityId: string) => {
+    const activity = wellnessActivities.find(a => a.id === activityId);
+    
     const newCompleted = new Set(completedActivities);
     if (newCompleted.has(activityId)) {
       newCompleted.delete(activityId);
     } else {
       newCompleted.add(activityId);
+      // Award XP for completing activity
+      if (activity?.xpActivity && activityId !== '3') { // Don't double-award for mood reflection
+        const xpEntry = addXP(activity.xpActivity);
+        if (xpEntry) {
+          setXpNotification(xpEntry);
+        }
+      }
     }
     setCompletedActivities(newCompleted);
   };
@@ -113,13 +142,27 @@ export default function Dashboard() {
     activity.id === '3' ? currentMood !== null : completedActivities.has(activity.id)
   ).length;
 
+  const todaysXP = getTodaysXP();
+  const recentXPEntries = getRecentXPEntries(5);
+
   return (
     <SafeAreaView style={styles.container}>
+      <XPNotification 
+        xpEntry={xpNotification} 
+        onComplete={handleXPNotificationComplete} 
+      />
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greeting}>Good morning! 🌅</Text>
           <Text style={styles.subtitle}>How are you feeling today?</Text>
+        </View>
+
+        {/* XP Progress */}
+        <View style={styles.section}>
+          <View style={styles.xpContainer}>
+            <XPProgressBar userLevel={userLevel} />
+          </View>
         </View>
 
         {/* Mood Selector */}
@@ -146,6 +189,9 @@ export default function Dashboard() {
             <Text style={styles.progressTitle}>Today's Progress</Text>
             <Text style={styles.progressCount}>
               {completedCount}/{wellnessActivities.length} activities completed
+            </Text>
+            <Text style={styles.xpEarned}>
+              {todaysXP} XP earned today
             </Text>
             <View style={styles.progressBarContainer}>
               <View style={styles.progressBar}>
@@ -177,6 +223,13 @@ export default function Dashboard() {
                 onPress={() => handleActivityComplete(activity.id)}
               />
             ))}
+          </View>
+        </View>
+
+        {/* XP Activity Feed */}
+        <View style={styles.section}>
+          <View style={styles.xpFeedContainer}>
+            <XPActivityFeed xpEntries={recentXPEntries} />
           </View>
         </View>
 
@@ -249,6 +302,12 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  xpContainer: {
+    paddingHorizontal: 20,
+  },
+  xpFeedContainer: {
+    paddingHorizontal: 20,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -316,6 +375,12 @@ const styles = StyleSheet.create({
   progressCount: {
     fontSize: 14,
     color: '#64748b',
+    marginBottom: 4,
+  },
+  xpEarned: {
+    fontSize: 14,
+    color: '#3B82F6',
+    fontWeight: '600',
     marginBottom: 12,
   },
   progressBarContainer: {

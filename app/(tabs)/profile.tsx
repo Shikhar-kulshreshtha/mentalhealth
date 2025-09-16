@@ -11,15 +11,20 @@ import {
 import { Award, Calendar, Target, TrendingUp, Settings, User, Crown, Star, Zap, CreditCard as Edit3, Trophy } from 'lucide-react-native';
 import { AchievementCard } from '@/components/AchievementCard';
 import { StatCard } from '@/components/StatCard';
+import { XPProgressBar } from '@/components/XPProgressBar';
+import { XPActivityFeed } from '@/components/XPActivityFeed';
 import { useMoodHistory } from '@/hooks/useMoodHistory';
+import { useXPSystem } from '@/hooks/useXPSystem';
 
 const { width } = Dimensions.get('window');
 
 export default function Profile() {
   const [selectedTab, setSelectedTab] = useState<'stats' | 'achievements' | 'history'>('stats');
   const { moodHistory, getWeeklyAverage } = useMoodHistory();
+  const { userLevel, totalXP, xpEntries, getTodaysXP } = useXPSystem();
   
   const weeklyAverage = getWeeklyAverage();
+  const todaysXP = getTodaysXP();
 
   const userStats = [
     {
@@ -31,23 +36,23 @@ export default function Profile() {
     },
     {
       id: '2',
-      title: 'Total Sessions',
-      value: '42',
-      description: 'Wellness activities',
+      title: 'Total XP',
+      value: totalXP.toString(),
+      description: 'Experience points',
       color: '#10B981',
     },
     {
       id: '3',
-      title: 'Achievements',
-      value: '8/15',
-      description: 'Badges earned',
+      title: 'Current Level',
+      value: userLevel.level.toString(),
+      description: userLevel.title,
       color: '#8B5CF6',
     },
     {
       id: '4',
-      title: 'Mood Score',
-      value: `${weeklyAverage.toFixed(1)}/10`,
-      description: 'Average this week',
+      title: 'Today\'s XP',
+      value: todaysXP.toString(),
+      description: 'Points earned today',
       color: '#3B82F6',
     },
   ];
@@ -155,13 +160,18 @@ export default function Profile() {
               <Text style={styles.userName}>Alex Thompson</Text>
               <View style={styles.levelContainer}>
                 <Crown size={16} color="#F59E0B" />
-                <Text style={styles.userLevel}>Wellness Level 3</Text>
+                <Text style={styles.userLevel}>Level {userLevel.level} • {userLevel.title}</Text>
               </View>
             </View>
           </View>
           <TouchableOpacity style={styles.settingsButton}>
             <Settings size={24} color="#64748B" />
           </TouchableOpacity>
+        </View>
+
+        {/* XP Progress Bar */}
+        <View style={styles.xpSection}>
+          <XPProgressBar userLevel={userLevel} showDetails={false} />
         </View>
 
         {/* Tab Selector */}
@@ -211,7 +221,7 @@ export default function Profile() {
                 selectedTab === 'history' && styles.tabTextActive,
               ]}
             >
-              History
+              XP History
             </Text>
           </TouchableOpacity>
         </View>
@@ -242,13 +252,13 @@ export default function Profile() {
                 <Text style={styles.summaryLabel}>• Consistent daily check-ins (7/7 days)</Text>
               </View>
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>• Improved average mood score (+15%)</Text>
+                <Text style={styles.summaryLabel}>• Earned {Math.floor(totalXP * 0.3)} XP this week</Text>
               </View>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>• 2 new achievements unlocked</Text>
               </View>
               <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>• 18 wellness activities completed</Text>
+                <Text style={styles.summaryLabel}>• Reached Level {userLevel.level}</Text>
               </View>
             </View>
           </View>
@@ -290,29 +300,7 @@ export default function Profile() {
 
         {selectedTab === 'history' && (
           <View style={styles.content}>
-            <Text style={styles.sectionTitle}>Mood History</Text>
-            <View style={styles.historyContainer}>
-              {displayMoodHistory.map((entry, index) => (
-                <View key={index} style={styles.historyItem}>
-                  <View style={styles.historyDate}>
-                    <Text style={styles.historyDateText}>
-                      {formatHistoryDate(entry.date)}
-                    </Text>
-                  </View>
-                  <View style={styles.historyMood}>
-                    <Text style={styles.historyMoodEmoji}>
-                      {getMoodEmoji(entry.mood)}
-                    </Text>
-                    <Text style={styles.historyMoodScore}>{entry.score}/10</Text>
-                  </View>
-                  <View style={styles.historyActivities}>
-                    <Text style={styles.historyActivitiesText}>
-                      {Math.floor(Math.random() * 4) + 1} activities
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
+            <XPActivityFeed xpEntries={xpEntries.slice(-10)} title="XP Activity History" />
           </View>
         )}
       </ScrollView>
@@ -367,6 +355,10 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     padding: 8,
+  },
+  xpSection: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -451,54 +443,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#475569',
     lineHeight: 24,
-  },
-  historyContainer: {
-    gap: 12,
-    paddingBottom: 20,
-  },
-  historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  historyDate: {
-    width: 80,
-  },
-  historyDateText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  historyMood: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  historyMoodEmoji: {
-    fontSize: 24,
-  },
-  historyMoodScore: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-  historyActivities: {
-    alignItems: 'flex-end',
-  },
-  historyActivitiesText: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
   },
 });
