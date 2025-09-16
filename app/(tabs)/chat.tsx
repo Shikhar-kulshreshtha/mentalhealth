@@ -11,7 +11,6 @@ import {
   Platform,
 } from 'react-native';
 import { Send, Bot, Heart, Lightbulb } from 'lucide-react-native';
-import { useXPSystem } from '@/hooks/useXPSystem';
 
 const API_KEY = "AIzaSyCdFmhV6ypDZIVoesgiG9WpegqzLRZx1nA"; // Move to .env in production
 
@@ -81,7 +80,6 @@ export const sendMessageToGemini = async (message: string, history: Message[]) =
 };
 
 export default function Chat() {
-  const { addXP } = useXPSystem();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -128,9 +126,6 @@ export default function Chat() {
 
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
-
-    // Award XP for chat interaction
-    addXP('chat_session');
 
     const messageToSend = inputText.trim().toLowerCase();
     setInputText('');
